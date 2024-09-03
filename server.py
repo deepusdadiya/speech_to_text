@@ -1,7 +1,8 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, File, UploadFile
 import whisper
 import numpy as np
 import ssl
+import os
 app = FastAPI()
 ssl._create_default_https_context = ssl._create_unverified_context
 model = whisper.load_model("base")
@@ -36,3 +37,20 @@ async def websocket_endpoint(websocket: WebSocket):
     except Exception as e:
         print(f"Error: {e}")
         await websocket.close()
+
+@app.post("/transcribe/")
+async def transcribe_file(file: UploadFile = File(...)):
+    try:
+        file_contents = await file.read()
+        file_path = f"temp_{file.filename}"
+        with open(file_path, "wb") as f:
+            f.write(file_contents)
+        result = model.transcribe(file_path)
+        detected_language = result["language"]
+        os.remove(file_path)
+        if detected_language in ['en', 'hi']:
+            return {"transcription": result["text"]}
+        else:
+            return {"error": "Language not supported", "language": detected_language}
+    except Exception as e:
+        return {"error": str(e)}
