@@ -3,117 +3,122 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Speech to Text Transcription</title>
+    <title>Audio Transcription UI</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             margin: 20px;
         }
-        .container {
-            display: flex;
-            flex-direction: column;
-            max-width: 600px;
-            margin: auto;
+        h1 {
+            font-size: 24px;
         }
-        .section {
-            margin-bottom: 20px;
-            padding: 15px;
+        #transcription {
+            margin-top: 20px;
             border: 1px solid #ccc;
-            border-radius: 8px;
+            padding: 10px;
+            background-color: #f9f9f9;
         }
-        button {
-            padding: 10px 15px;
-            font-size: 16px;
-            cursor: pointer;
+        #uploadSection, #realtimeSection {
+            margin-bottom: 20px;
         }
-        #transcriptionOutput {
-            white-space: pre-wrap;
-            margin-top: 15px;
+        #fileInput {
+            margin-top: 10px;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="section">
-            <h2>Real-Time Transcription</h2>
-            <button id="startButton">Start Transcription</button>
-            <div id="transcriptionOutput"></div>
-        </div>
+    <h1>Audio Transcription Service</h1>
 
-        <div class="section">
-            <h2>Bulk Transcription</h2>
-            <input type="file" id="audioFile" accept="audio/*,video/*">
-            <button id="uploadButton">Upload and Transcribe</button>
-            <div id="bulkTranscriptionOutput"></div>
+    <!-- Real-time Transcription Section -->
+    <div id="realtimeSection">
+        <h2>Real-Time Transcription</h2>
+        <button id="startRealTime">Start Real-Time Transcription</button>
+        <div id="transcription" hidden>
+            <h3>Real-Time Transcription Output:</h3>
+            <p id="realTimeText">Waiting for audio...</p>
+        </div>
+    </div>
+
+    <!-- Batch Transcription Section -->
+    <div id="uploadSection">
+        <h2>Batch Transcription</h2>
+        <input type="file" id="fileInput" accept="audio/*">
+        <button id="uploadButton">Upload and Transcribe</button>
+        <div id="transcription" hidden>
+            <h3>Batch Transcription Output:</h3>
+            <p id="batchText">No transcription yet...</p>
         </div>
     </div>
 
     <script>
-        // Real-Time Transcription
-        const startButton = document.getElementById('startButton');
-        const transcriptionOutput = document.getElementById('transcriptionOutput');
-        let socket;
-        let mediaRecorder;
-
-        startButton.onclick = async () => {
-            // Initialize WebSocket connection
-            socket = new WebSocket('ws://127.0.0.1:8000/ws/transcribe/');
-            socket.onopen = () => {
-                console.log('WebSocket connection established');
-                startButton.disabled = true;
-                transcriptionOutput.innerText = 'Listening...';
-            };
-
-            socket.onmessage = (event) => {
-                transcriptionOutput.innerText += `\n${event.data}`;
-            };
-
-            socket.onclose = () => {
-                console.log('WebSocket connection closed');
-                startButton.disabled = false;
-                transcriptionOutput.innerText += '\nConnection closed.';
-            };
-
-            // Access user's microphone
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-
-            mediaRecorder.ondataavailable = (event) => {
-                if (event.data.size > 0 && socket.readyState === WebSocket.OPEN) {
-                    socket.send(event.data);
-                }
-            };
-
-            mediaRecorder.start(250); // Send audio data every 250ms
-        };
-
-        // Bulk Transcription
+        const startRealTimeButton = document.getElementById('startRealTime');
         const uploadButton = document.getElementById('uploadButton');
-        const audioFile = document.getElementById('audioFile');
-        const bulkTranscriptionOutput = document.getElementById('bulkTranscriptionOutput');
+        const fileInput = document.getElementById('fileInput');
+        const realTimeText = document.getElementById('realTimeText');
+        const batchText = document.getElementById('batchText');
+        const transcriptionDiv = document.getElementById('transcription');
 
-        uploadButton.onclick = async () => {
-            const file = audioFile.files[0];
+        // WebSocket connection for real-time transcription
+        let socket;
+
+        startRealTimeButton.addEventListener('click', () => {
+            if (socket) {
+                socket.close();
+            }
+
+            socket = new WebSocket('ws://127.0.0.1:8000/ws/transcribe/');
+
+            socket.onmessage = function(event) {
+                realTimeText.textContent = event.data;
+                transcriptionDiv.hidden = false;
+            };
+
+            socket.onopen = function() {
+                console.log('WebSocket connection established');
+                transcriptionDiv.hidden = false;
+                realTimeText.textContent = 'Start speaking...';
+            };
+
+            socket.onclose = function() {
+                console.log('WebSocket connection closed');
+                realTimeText.textContent = 'Connection closed.';
+            };
+
+            socket.onerror = function(error) {
+                console.error('WebSocket error:', error);
+                realTimeText.textContent = 'WebSocket error.';
+            };
+        });
+
+        // Upload and transcribe audio file
+        uploadButton.addEventListener('click', async () => {
+            const file = fileInput.files[0];
             if (!file) {
-                alert('Please select a file');
+                alert('Please select a file first.');
                 return;
             }
 
             const formData = new FormData();
             formData.append('file', file);
 
-            const response = await fetch('/transcribe/', {
-                method: 'POST',
-                body: formData,
-            });
+            try {
+                const response = await fetch('http://127.0.0.1:8000/transcribe/', {
+                    method: 'POST',
+                    body: formData,
+                });
 
-            const result = await response.json();
-            if (result.transcription) {
-                bulkTranscriptionOutput.innerText = result.transcription;
-            } else if (result.error) {
-                bulkTranscriptionOutput.innerText = `Error: ${result.error}`;
+                const result = await response.json();
+                if (response.ok) {
+                    batchText.textContent = result.transcription || 'No transcription result.';
+                } else {
+                    batchText.textContent = 'Error: ' + result.error;
+                }
+                transcriptionDiv.hidden = false;
+            } catch (error) {
+                console.error('Error:', error);
+                batchText.textContent = 'An error occurred.';
             }
-        };
+        });
     </script>
 </body>
 </html>
