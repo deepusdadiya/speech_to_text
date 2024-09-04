@@ -5,13 +5,10 @@ import sounddevice as sd
 async def send_audio(uri):
     async with websockets.connect(uri) as websocket:
         loop = asyncio.get_event_loop()
-
         def callback(indata, frames, time, status):
             if status:
                 print(status)
-            # Send the audio data asynchronously
             asyncio.run_coroutine_threadsafe(websocket.send(indata.tobytes()), loop)
-
         with sd.InputStream(samplerate=16000, channels=1, dtype='int16', callback=callback):
             print("Start speaking...")
             while True:
