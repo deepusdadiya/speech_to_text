@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speech to Text Transcription</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            max-width: 600px;
+            margin: auto;
+        }
+        .section {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        }
+        button {
+            padding: 10px 15px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        #transcriptionOutput {
+            white-space: pre-wrap;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="section">
+            <h2>Real-Time Transcription</h2>
+            <button id="startButton">Start Transcription</button>
+            <div id="transcriptionOutput"></div>
+        </div>
+
+        <div class="section">
+            <h2>Bulk Transcription</h2>
+            <input type="file" id="audioFile" accept="audio/*,video/*">
+            <button id="uploadButton">Upload and Transcribe</button>
+            <div id="bulkTranscriptionOutput"></div>
+        </div>
+    </div>
+
+    <script>
+        // Real-Time Transcription
+        const startButton = document.getElementById('startButton');
+        const transcriptionOutput = document.getElementById('transcriptionOutput');
+        let socket;
+        let mediaRecorder;
+
+        startButton.onclick = async () => {
+            // Initialize WebSocket connection
+            socket = new WebSocket('ws://127.0.0.1:8000/ws/transcribe/');
+            socket.onopen = () => {
+                console.log('WebSocket connection established');
+                startButton.disabled = true;
+                transcriptionOutput.innerText = 'Listening...';
+            };
+
+            socket.onmessage = (event) => {
+                transcriptionOutput.innerText += `\n${event.data}`;
+            };
+
+            socket.onclose = () => {
+                console.log('WebSocket connection closed');
+                startButton.disabled = false;
+                transcriptionOutput.innerText += '\nConnection closed.';
+            };
+
+            // Access user's microphone
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0 && socket.readyState === WebSocket.OPEN) {
+                    socket.send(event.data);
+                }
+            };
+
+            mediaRecorder.start(250); // Send audio data every 250ms
+        };
+
+        // Bulk Transcription
+        const uploadButton = document.getElementById('uploadButton');
+        const audioFile = document.getElementById('audioFile');
+        const bulkTranscriptionOutput = document.getElementById('bulkTranscriptionOutput');
+
+        uploadButton.onclick = async () => {
+            const file = audioFile.files[0];
+            if (!file) {
+                alert('Please select a file');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const response = await fetch('/transcribe/', {
+                method: 'POST',
+                body: formData,
+            });
+
+            const result = await response.json();
+            if (result.transcription) {
+                bulkTranscriptionOutput.innerText = result.transcription;
+            } else if (result.error) {
+                bulkTranscriptionOutput.innerText = `Error: ${result.error}`;
+            }
+        };
+    </script>
+</body>
+</html>
