@@ -14,29 +14,42 @@ model = whisper.load_model("base")
 @app.websocket("/ws/transcribe/")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
-    audio_buffer = []
+    audio_buffer = b""
+
     try:
         while True:
             data = await websocket.receive_bytes()
-            print(f"Received {len(data)} bytes")
-            audio_buffer.append(data)
+            audio_buffer += data
+
             try:
-                audio_bytes = b"".join(audio_buffer)
-                audio_data = np.frombuffer(audio_bytes, dtype=np.float32)
-                
-                if len(audio_data) > 16000:
+                # Logging the received bytes
+                print(f"Received {len(data)} bytes of data.")
+
+                # Assuming incoming audio is in int16 format
+                audio_data = np.frombuffer(audio_buffer, dtype=np.int16)
+
+                # Check if audio_data is empty after conversion
+                if audio_data.size == 0:
+                    raise ValueError("Converted audio data is empty. Ensure that the input data is correct.")
+
+                # Convert to float32 as Whisper expects normalized audio
+                audio_data = audio_data.astype(np.float32) / 32768.0
+
+                if len(audio_data) > 16000:  # 1 second of audio at 16kHz
+                    # Process audio buffer with Whisper
                     result = model.transcribe(audio_data)
                     detected_language = result["language"]
                     if detected_language in ['en', 'hi']:
                         await websocket.send_text(result["text"])
                     else:
                         await websocket.send_text("Language not supported: " + detected_language)
-                    audio_buffer = []
+                    audio_buffer = b""  # Reset buffer after processing
                 else:
                     print("Audio buffer too short, waiting for more data...")
             except Exception as e:
                 print(f"Error processing audio: {e}")
                 await websocket.send_text(f"Error processing audio: {e}")
+                audio_buffer = b""  # Clear the buffer in case of error
     except WebSocketDisconnect:
         print("Client disconnected")
     except Exception as e:
