@@ -53,6 +53,8 @@ async def real_time_transcription():
             try:
                 message = await websocket.recv()
                 st.session_state['real_time_transcription'] = message
+                # Debug output to check if messages are being received
+                print(f"Received message: {message}")
             except Exception as e:
                 st.session_state['real_time_transcription'] = f"Error: {e}"
             await asyncio.sleep(1)  # Sleep to prevent excessive CPU usage
