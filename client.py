@@ -23,5 +23,4 @@ async def send_audio(uri):
                     break
 
 
-# Run the asyncio event loop
 asyncio.run(send_audio("ws://127.0.0.1:8000/ws/transcribe/"))
