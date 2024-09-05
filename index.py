@@ -2,12 +2,12 @@ import streamlit as st
 import requests
 import asyncio
 import websockets
-from threading import Thread
 
 st.set_page_config(page_title="Audio Transcription Service")
 
 st.title("Audio Transcription Service")
 
+# Batch Transcription Section
 st.header("Batch Transcription")
 audio_file = st.file_uploader("Upload an audio file", type=["wav", "mp3", "m4a"])
 
@@ -26,42 +26,52 @@ if st.button("Upload and Transcribe"):
     else:
         st.write("Please upload a file first.")
 
-
 st.subheader("Batch Transcription Output")
 batch_transcription_output = st.empty()
 
-
+# Real-Time Transcription Section
 st.header("Real-Time Transcription")
 
 start_button = st.button("Start Real-Time Transcription")
 stop_button = st.button("Stop Real-Time Transcription")
 
-
 st.subheader("Real-Time Transcription Output")
 real_time_transcription_output = st.empty()
 
+# WebSocket connection URL
+WS_URL = "ws://127.0.0.1:8000/ws/transcribe/"
+
+# Initialize session state if not already
+if 'real_time_transcription' not in st.session_state:
+    st.session_state['real_time_transcription'] = "Waiting for real-time transcription..."
+if 'websocket_connected' not in st.session_state:
+    st.session_state.websocket_connected = False
 
 async def real_time_transcription():
-    uri = 'ws://127.0.0.1:8000/ws/transcribe/'
-    async with websockets.connect(uri) as socket:
-        try:
-            while True:
-                message = await socket.recv()
-                real_time_transcription_output.text(message)
-        except websockets.ConnectionClosed:
-            real_time_transcription_output.text("Connection closed.")
-        except Exception as e:
-            real_time_transcription_output.text(f"Error: {e}")
+    async with websockets.connect(WS_URL) as websocket:
+        while st.session_state.websocket_connected:
+            try:
+                message = await websocket.recv()
+                st.session_state['real_time_transcription'] = message
+            except Exception as e:
+                st.session_state['real_time_transcription'] = f"Error: {e}"
+            await asyncio.sleep(1)  # Sleep to prevent excessive CPU usage
 
-def start_websocket_loop():
-    asyncio.run(real_time_transcription())
+# Manage WebSocket connection
+def manage_websocket_connection():
+    if st.session_state.websocket_connected:
+        asyncio.run(real_time_transcription())
 
-if start_button:
-    if 'websocket_thread' not in st.session_state or not st.session_state.websocket_thread.is_alive():
-        st.session_state.websocket_thread = Thread(target=start_websocket_loop)
-        st.session_state.websocket_thread.start()
-    st.write("Connected to server. Start speaking...")
+# Start WebSocket transcription
+if start_button and not st.session_state.websocket_connected:
+    st.session_state.websocket_connected = True
+    st.write("Real-time transcription started.")
+    manage_websocket_connection()
 
-if stop_button and 'websocket_thread' in st.session_state:
-    st.session_state.websocket_thread.join(timeout=1)  
+# Stop WebSocket transcription
+if stop_button and st.session_state.websocket_connected:
+    st.session_state.websocket_connected = False
     st.write("Real-time transcription stopped.")
+
+# Display real-time transcription
+real_time_transcription_output.text(st.session_state['real_time_transcription'])
