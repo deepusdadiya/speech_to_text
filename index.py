@@ -4,14 +4,12 @@ import asyncio
 import websockets
 import logging
 
-# Configure logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 st.set_page_config(page_title="Audio Transcription Service")
 
 st.title("Audio Transcription Service")
 
-# Batch Transcription Section
 st.header("Batch Transcription")
 audio_file = st.file_uploader("Upload an audio file", type=["wav", "mp3", "m4a"])
 
@@ -39,7 +37,6 @@ if st.button("Upload and Transcribe"):
 st.subheader("Batch Transcription Output")
 batch_transcription_output = st.empty()
 
-# Real-Time Transcription Section
 st.header("Real-Time Transcription")
 
 start_button = st.button("Start Real-Time Transcription")
@@ -48,26 +45,23 @@ stop_button = st.button("Stop Real-Time Transcription")
 st.subheader("Real-Time Transcription Output")
 real_time_transcription_output = st.empty()
 
-# WebSocket connection URL
 WS_URL = "ws://127.0.0.1:8000/ws/transcribe/"
 
-# Initialize session state if not already
 if 'real_time_transcription' not in st.session_state:
     st.session_state['real_time_transcription'] = "Waiting for real-time transcription..."
 if 'websocket_connected' not in st.session_state:
     st.session_state.websocket_connected = False
 
 async def send_audio_data(websocket):
-    # Open an audio file and send data through WebSocket
     try:
         logging.debug("Sending audio data.")
-        with open('sample-0.mp3', 'rb') as audio:  # Replace with actual audio file path
-            data = audio.read(1024)  # Adjust chunk size as necessary
+        with open('sample-0.mp3', 'rb') as audio:  
+            data = audio.read(1024) 
             while data and st.session_state.websocket_connected:
                 await websocket.send(data)
                 logging.debug("Sent audio chunk over WebSocket.")
                 data = audio.read(1024)
-                await asyncio.sleep(0.1)  # Throttle to mimic real-time audio
+                await asyncio.sleep(0.1)  
     except Exception as e:
         logging.error(f"Error while sending audio data: {e}")
 
@@ -75,7 +69,6 @@ async def real_time_transcription():
     logging.debug("Attempting to connect to WebSocket.")
     async with websockets.connect(WS_URL) as websocket:
         logging.info("WebSocket connection established.")
-        # Send audio data asynchronously
         await send_audio_data(websocket)
         
         while st.session_state.websocket_connected:
@@ -90,7 +83,6 @@ async def real_time_transcription():
                 st.session_state['real_time_transcription'] = f"Error: {e}"
             await asyncio.sleep(1)
 
-# This function will handle the event loop explicitly
 def run_asyncio_task():
     logging.debug("Running asyncio task for real-time transcription.")
     loop = asyncio.new_event_loop()
@@ -98,20 +90,17 @@ def run_asyncio_task():
     loop.run_until_complete(real_time_transcription())
     logging.debug("Asyncio task completed.")
 
-# Start WebSocket transcription
 if start_button and not st.session_state.websocket_connected:
     logging.debug("Start button clicked. Starting WebSocket transcription.")
     st.session_state.websocket_connected = True
     st.write("Real-time transcription started.")
     run_asyncio_task()
 
-# Stop WebSocket transcription
 if stop_button and st.session_state.websocket_connected:
     logging.debug("Stop button clicked. Stopping WebSocket transcription.")
     st.session_state.websocket_connected = False
     st.write("Real-time transcription stopped.")
 
-# Display real-time transcription
 real_time_transcription_output.text(st.session_state['real_time_transcription'])
 
 logging.debug("End of script.")
