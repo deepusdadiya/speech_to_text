@@ -1,6 +1,7 @@
 import asyncio
 import websockets
 import sounddevice as sd
+import numpy as np
 
 async def send_audio(uri):
     async with websockets.connect(uri) as websocket:
@@ -15,12 +16,11 @@ async def send_audio(uri):
                 try:
                     message = await websocket.recv()
                     print("Transcription:", message)
-                except websockets.exceptions.ConnectionClosedOK:
+                except websockets.ConnectionClosed:
                     print("Connection closed by server.")
                     break
                 except Exception as e:
                     print(f"An error occurred: {e}")
                     break
-
-
+                
 asyncio.run(send_audio("ws://127.0.0.1:8000/ws/transcribe/"))

@@ -5,6 +5,7 @@ import ssl
 import os
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+import logging
 
 app = FastAPI()
 app.add_middleware(
@@ -27,28 +28,24 @@ async def websocket_endpoint(websocket: WebSocket):
         while True:
             data = await websocket.receive_bytes()
             audio_buffer += data
-            try:
-                print(f"Received {len(data)} bytes of data.")
-                audio_data = np.frombuffer(audio_buffer, dtype=np.int16)
-                if audio_data.size == 0:
-                    raise ValueError("Converted audio data is empty. Ensure that the input data is correct.")
-                audio_data = audio_data.astype(np.float32) / 32768.0
-                if len(audio_data) > 16000: 
-                    print(f"Processing {len(audio_data)} samples of audio data.")
-                    result = model.transcribe(audio_data)
-                    detected_language = result["language"]
-                    print(f"Detected language: {detected_language}, Transcription: {result['text']}")
-                    if detected_language in ['en', 'hi']:
-                        await websocket.send_text(result["text"])
-                    else:
-                        await websocket.send_text("Language not supported: " + detected_language)
-                    audio_buffer = b""
+            print(f"Received {len(data)} bytes of data.")  # Debugging
+            audio_data = np.frombuffer(audio_buffer, dtype=np.int16)
+            if audio_data.size == 0:
+                raise ValueError("Converted audio data is empty. Ensure that the input data is correct.")
+            audio_data = audio_data.astype(np.float32) / 32768.0
+            if len(audio_data) > 16000: 
+                print(f"Processing {len(audio_data)} samples of audio data.")  # Debugging
+                result = model.transcribe(audio_data)
+                detected_language = result["language"]
+                print(f"Detected language: {detected_language}, Transcription: {result['text']}")
+                if detected_language in ['en', 'hi']:
+                    logging.debug(f"Sending transcription message")
+                    await websocket.send_text(result["text"])
                 else:
-                    print("Audio buffer too short, waiting for more data...")
-            except Exception as e:
-                print(f"Error processing audio: {e}")
-                await websocket.send_text(f"Error processing audio: {e}")
-                audio_buffer = b""  
+                    await websocket.send_text("Language not supported: " + detected_language)
+                audio_buffer = b""
+            else:
+                print("Audio buffer too short, waiting for more data...")
     except WebSocketDisconnect:
         print("Client disconnected")
     except Exception as e:
