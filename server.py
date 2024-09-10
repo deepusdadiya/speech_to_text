@@ -28,13 +28,13 @@ async def websocket_endpoint(websocket: WebSocket):
         while True:
             data = await websocket.receive_bytes()
             audio_buffer += data
-            print(f"Received {len(data)} bytes of data.")  # Debugging
+            print(f"Received {len(data)} bytes of data.")  
             audio_data = np.frombuffer(audio_buffer, dtype=np.int16)
             if audio_data.size == 0:
                 raise ValueError("Converted audio data is empty. Ensure that the input data is correct.")
             audio_data = audio_data.astype(np.float32) / 32768.0
             if len(audio_data) > 16000: 
-                print(f"Processing {len(audio_data)} samples of audio data.")  # Debugging
+                print(f"Processing {len(audio_data)} samples of audio data.")  
                 result = model.transcribe(audio_data)
                 detected_language = result["language"]
                 print(f"Detected language: {detected_language}, Transcription: {result['text']}")
