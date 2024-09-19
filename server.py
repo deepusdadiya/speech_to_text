@@ -20,6 +20,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 ssl._create_default_https_context = ssl._create_unverified_context
 model = whisper.load_model("base")
 
+
 @app.websocket("/ws/transcribe/")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
@@ -51,6 +52,7 @@ async def websocket_endpoint(websocket: WebSocket):
     except Exception as e:
         print(f"Error: {e}")
         await websocket.close()
+        
 
 @app.post("/transcribe/")
 async def transcribe_file(file: UploadFile = File(...)):

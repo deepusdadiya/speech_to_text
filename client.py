@@ -23,4 +23,5 @@ async def send_audio(uri):
                     print(f"An error occurred: {e}")
                     break
                 
+                
 asyncio.run(send_audio("ws://127.0.0.1:8000/ws/transcribe/"))
