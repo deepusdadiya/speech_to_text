@@ -13,9 +13,13 @@ async def listen_to_websocket(uri):
                         logging.error("Empty message received from WebSocket.")
                         break
 
-                except websockets.exceptions.ConnectionClosed as e:
-                    logging.error(f"Connection closed: {e.code} - {e.reason}")
-                    break  # Exit the loop when the connection is closed.
+                except websockets.exceptions.ConnectionClosedOK as e:
+                    logging.info("WebSocket closed normally.")
+                    break  # Normal closure, no error
+                except websockets.exceptions.ConnectionClosedError as e:
+                    logging.error(f"WebSocket closed with error: {e.code} - {e.reason}")
+                    break  # Exit on unexpected closure
+
 
     except websockets.exceptions.WebSocketException as e:
         logging.error(f"WebSocket error occurred: {e}")

@@ -42,6 +42,9 @@ async def websocket_endpoint(websocket: WebSocket):
                 if detected_language in ['en', 'hi']:
                     logging.debug(f"Sending transcription message")
                     await websocket.send_text(result["text"])
+                elif detected_language == 'nn':  # If Whisper detects Norwegian, map to English
+                    logging.debug("Mapped 'nn' (Norwegian) to 'en' (English).")
+                    await websocket.send_text(result["text"])
                 else:
                     await websocket.send_text("Language not supported: " + detected_language)
                 audio_buffer = b""
@@ -52,7 +55,7 @@ async def websocket_endpoint(websocket: WebSocket):
     except Exception as e:
         print(f"Error: {e}")
         await websocket.close()
-        
+
 
 @app.post("/transcribe/")
 async def transcribe_file(file: UploadFile = File(...)):
@@ -61,11 +64,20 @@ async def transcribe_file(file: UploadFile = File(...)):
         file_path = f"temp_{file.filename}"
         with open(file_path, "wb") as f:
             f.write(file_contents)
+        
+        # Transcribe the file and detect language
         result = model.transcribe(file_path)
-        detected_language = result["language"]  
+        detected_language = result["language"]
+        transcription_text = result['text']
+
         os.remove(file_path)
+        logging.debug(f"Detected language: {detected_language}, Transcription: {transcription_text}")
+
         if detected_language in ['en', 'hi']:
-            return {"transcription": result["text"]}
+            return {"transcription": transcription_text}
+        elif detected_language == 'nn': 
+            logging.debug("Mapped 'nn' (Norwegian) to 'en' (English).")
+            return {"transcription": transcription_text}
         else:
             return {"error": "Language not supported", "language": detected_language}
     except Exception as e:
