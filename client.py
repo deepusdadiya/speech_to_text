@@ -1,27 +1,25 @@
-import asyncio
 import websockets
-import sounddevice as sd
-import numpy as np
+import logging
 
-async def send_audio(uri):
-    async with websockets.connect(uri) as websocket:
-        loop = asyncio.get_event_loop()
-        def callback(indata, frames, time, status):
-            if status:
-                print(status)
-            asyncio.run_coroutine_threadsafe(websocket.send(indata.tobytes()), loop)
-        with sd.InputStream(samplerate=16000, channels=1, dtype='int16', callback=callback):
-            print("Start speaking...")
+async def listen_to_websocket(uri):
+    try:
+        async with websockets.connect(uri) as websocket:
             while True:
                 try:
                     message = await websocket.recv()
-                    print("Transcription:", message)
-                except websockets.ConnectionClosed:
-                    print("Connection closed by server.")
-                    break
-                except Exception as e:
-                    print(f"An error occurred: {e}")
-                    break
-                
-                
-asyncio.run(send_audio("ws://127.0.0.1:8000/ws/transcribe/"))
+                    if message:
+                        logging.info(f"Message received from WebSocket: {message}")
+                    else:
+                        logging.error("Empty message received from WebSocket.")
+                        break
+
+                except websockets.exceptions.ConnectionClosed as e:
+                    logging.error(f"Connection closed: {e.code} - {e.reason}")
+                    break  # Exit the loop when the connection is closed.
+
+    except websockets.exceptions.WebSocketException as e:
+        logging.error(f"WebSocket error occurred: {e}")
+
+async def main():
+    uri = "ws://127.0.0.1:8000/ws/transcribe/"
+    await listen_to_websocket(uri)
