@@ -1,3 +1,5 @@
+import sys
+sys.path.append('/Users/deep2.usdadiya/Desktop/Speech to text/speech_to_text/deep/lib/python3.11/site-packages')
 from fastapi import FastAPI, File, UploadFile, WebSocket, WebSocketDisconnect
 import whisper
 import numpy as np
@@ -6,6 +8,14 @@ import os
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 import logging
+import torch
+from indic_transliteration import sanscript
+from indic_transliteration.sanscript import transliterate
+from textblob import TextBlob
+from fastapi.responses import JSONResponse
+import tempfile
+from pydub import AudioSegment
+from io import BytesIO
 
 app = FastAPI()
 app.add_middleware(
@@ -18,7 +28,16 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 ssl._create_default_https_context = ssl._create_unverified_context
-model = whisper.load_model("base")
+
+# if torch.backends.mps.is_available():
+#     device = torch.device("mps")
+# else:
+device = torch.device("cpu")
+torch.set_num_threads(4)
+
+# print(f"Using device: {device}")
+
+model = whisper.load_model("large", device=device)
 
 
 @app.websocket("/ws/transcribe/")
@@ -42,7 +61,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 if detected_language in ['en', 'hi']:
                     logging.debug(f"Sending transcription message")
                     await websocket.send_text(result["text"])
-                elif detected_language == 'nn':  # If Whisper detects Norwegian, map to English
+                elif detected_language == 'nn':
                     logging.debug("Mapped 'nn' (Norwegian) to 'en' (English).")
                     await websocket.send_text(result["text"])
                 else:
@@ -58,27 +77,35 @@ async def websocket_endpoint(websocket: WebSocket):
 
 
 @app.post("/transcribe/")
-async def transcribe_file(file: UploadFile = File(...)):
-    try:
-        file_contents = await file.read()
-        file_path = f"temp_{file.filename}"
-        with open(file_path, "wb") as f:
-            f.write(file_contents)
-        
-        # Transcribe the file and detect language
-        result = model.transcribe(file_path)
-        detected_language = result["language"]
-        transcription_text = result['text']
+async def transcribe_audio(file: UploadFile = File(...)):
+    # Check if the uploaded file is an audio file
+    if not file.content_type.startswith("audio/"):
+        return JSONResponse(content={"error": "File type not supported. Please upload an audio file."}, status_code=400)
 
-        os.remove(file_path)
-        logging.debug(f"Detected language: {detected_language}, Transcription: {transcription_text}")
+    # Create a temporary file to save the uploaded audio
+    with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+        try:
+            # Save the uploaded audio to the temporary file
+            temp_file.write(await file.read())
+            temp_file_path = temp_file.name
 
-        if detected_language in ['en', 'hi']:
-            return {"transcription": transcription_text}
-        elif detected_language == 'nn': 
-            logging.debug("Mapped 'nn' (Norwegian) to 'en' (English).")
-            return {"transcription": transcription_text}
-        else:
-            return {"error": "Language not supported", "language": detected_language}
-    except Exception as e:
-        return {"error": str(e)}
+            # Use Whisper to transcribe the audio
+            audio = whisper.load_audio(temp_file_path)
+            audio = whisper.pad_or_trim(audio)
+
+            # Make a prediction
+            result = model.transcribe(audio)
+
+            # Return the transcribed text
+            return JSONResponse(content={"transcription": result["text"]})
+
+        except Exception as e:
+            return JSONResponse(content={"error": str(e)}, status_code=500)
+        finally:
+            # Clean up the temporary file
+            if os.path.exists(temp_file_path):
+                os.remove(temp_file_path)
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
