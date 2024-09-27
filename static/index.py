@@ -19,7 +19,7 @@ if st.button("Upload and Transcribe"):
         with st.spinner('Transcribing...'):
             logging.debug("Audio file uploaded. Sending POST request for transcription.")
             response = requests.post(
-                "http://127.0.0.1:8000/transcribe/",
+                "http://127.0.0.1:8500/transcribe/",
                 files={"file": audio_file.getvalue()}
             )
             logging.debug(f"Response received: {response.status_code}")
@@ -45,7 +45,7 @@ stop_button = st.button("Stop Real-Time Transcription")
 st.subheader("Real-Time Transcription Output")
 real_time_transcription_output = st.empty()
 
-WS_URL = "ws://127.0.0.1:8000/ws/transcribe/"
+WS_URL = "ws://127.0.0.1:8500/ws/transcribe/"
 
 if 'real_time_transcription' not in st.session_state:
     st.session_state['real_time_transcription'] = "Waiting for real-time transcription..."

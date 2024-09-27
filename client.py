@@ -25,5 +25,5 @@ async def listen_to_websocket(uri):
         logging.error(f"WebSocket error occurred: {e}")
 
 async def main():
-    uri = "ws://127.0.0.1:8000/ws/transcribe/"
+    uri = "ws://127.0.0.1:8500/ws/transcribe/"
     await listen_to_websocket(uri)

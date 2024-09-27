@@ -9,13 +9,10 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 import torch
-from indic_transliteration import sanscript
-from indic_transliteration.sanscript import transliterate
-from textblob import TextBlob
 from fastapi.responses import JSONResponse
 import tempfile
 from pydub import AudioSegment
-from io import BytesIO
+import uvicorn
 
 app = FastAPI()
 app.add_middleware(
@@ -29,13 +26,8 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 ssl._create_default_https_context = ssl._create_unverified_context
 
-# if torch.backends.mps.is_available():
-#     device = torch.device("mps")
-# else:
 device = torch.device("cpu")
 torch.set_num_threads(4)
-
-# print(f"Using device: {device}")
 
 model = whisper.load_model("large", device=device)
 
@@ -107,5 +99,4 @@ async def transcribe_audio(file: UploadFile = File(...)):
                 os.remove(temp_file_path)
 
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8500)
