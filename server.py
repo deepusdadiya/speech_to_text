@@ -98,5 +98,6 @@ async def transcribe_audio(file: UploadFile = File(...)):
             if os.path.exists(temp_file_path):
                 os.remove(temp_file_path)
 
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8500)
