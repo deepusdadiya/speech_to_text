@@ -71,8 +71,8 @@ async def websocket_endpoint(websocket: WebSocket):
 @app.post("/transcribe/")
 async def transcribe_audio(file: UploadFile = File(...)):
     # Check if the uploaded file is an audio file
-    if not file.content_type.startswith("audio/"):
-        return JSONResponse(content={"error": "File type not supported. Please upload an audio file."}, status_code=400)
+    # if not file.content_type.startswith("audio/"):
+    #     return JSONResponse(content={"error": "File type not supported. Please upload an audio file."}, status_code=400)
 
     # Create a temporary file to save the uploaded audio
     with tempfile.NamedTemporaryFile(delete=False) as temp_file:
