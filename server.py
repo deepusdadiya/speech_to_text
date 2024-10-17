@@ -98,41 +98,15 @@ model = whisper.load_model("large", device=device)
 #             if os.path.exists(temp_file_path):
 #                 os.remove(temp_file_path)
 
-from indic_transliteration import sanscript
-from indic_transliteration.sanscript import transliterate
-import re
+from polyglot.text import Text
 
-def generic_romanize_hindi(text):
+def polyglot_romanize_hindi(text):
     """
-    Romanizes the Hindi text using a generic approach with minimal hardcoding.
+    Romanizes the Hindi text using Polyglot for better phonetic accuracy.
     """
-    # Step 1: Transliterate from Devanagari to WX notation, which is simpler and closer to Hinglish
-    transliterated_text = transliterate(text, sanscript.DEVANAGARI, sanscript.WX)
-
-    # Step 2: Post-process transliterated text for common phonetic simplifications
-    transliterated_text = apply_phonetic_simplifications(transliterated_text)
-
-    # Step 3: Normalize output (optional based on desired formatting)
-    transliterated_text = transliterated_text.lower()  # Convert to lowercase for easier reading
-    
-    return transliterated_text
-
-def apply_phonetic_simplifications(text):
-    """
-    Applies generic phonetic simplifications to improve the natural feel of transliterations.
-    """
-    # Remove nasal sounds (these are often marked with M in WX notation, remove them for readability)
-    text = re.sub(r'M', '', text)
-
-    # Simplify common vowel patterns
-    text = re.sub(r'aa', 'a', text)   # Shorten long vowels
-    text = re.sub(r'ii', 'i', text)   # Shorten long vowels (example: "kii" -> "ki")
-    text = re.sub(r'uu', 'u', text)   # Shorten long vowels (example: "huu" -> "hu")
-
-    # Replace capitalized vowel markers (which can represent emphasis or stress in certain schemes)
-    text = re.sub(r'[AI]', 'a', text)
-    
-    return text
+    polyglot_text = Text(text, hint_language_code='hi')  # Specify Hindi as the input language
+    romanized_text = polyglot_text.transliterate()  # Perform transliteration using Polyglot
+    return romanized_text
 
 
 @app.websocket("/ws/transcribe/")
@@ -156,8 +130,8 @@ async def websocket_endpoint(websocket: WebSocket):
                 print(f"Detected language: {detected_language}, Transcription: {transcription_text}")
 
                 if detected_language == 'hi':  # If language is Hindi
-                    # Generic Romanize the transcription
-                    transcription_text = generic_romanize_hindi(transcription_text)
+                    # Use Polyglot for better Romanization
+                    transcription_text = polyglot_romanize_hindi(transcription_text)
                 
                 if detected_language in ['en', 'hi']:
                     logging.debug(f"Sending transcription message")
@@ -199,9 +173,9 @@ async def transcribe_audio(file: UploadFile = File(...)):
             detected_language = result["language"]
             transcription_text = result["text"]
 
-            # If the detected language is Hindi, generic romanize the transcription
+            # If the detected language is Hindi, use Polyglot for Romanization
             if detected_language == 'hi':
-                transcription_text = generic_romanize_hindi(transcription_text)
+                transcription_text = polyglot_romanize_hindi(transcription_text)
 
             # Return the transcribed (and possibly romanized) text
             return JSONResponse(content={"transcription": transcription_text})
