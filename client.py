@@ -1,6 +1,7 @@
 import websockets
 import logging
 
+
 async def listen_to_websocket(uri):
     try:
         async with websockets.connect(uri) as websocket:
@@ -20,6 +21,7 @@ async def listen_to_websocket(uri):
                     break  # Exit on unexpected closure
     except websockets.exceptions.WebSocketException as e:
         logging.error(f"WebSocket error occurred: {e}")
+
 
 async def main():
     uri = "ws://127.0.0.1:8500/ws/transcribe/"
