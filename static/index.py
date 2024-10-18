@@ -101,9 +101,11 @@ if start_button and not st.session_state.websocket_connected:
     st.session_state.websocket_connected = True
     st.write("Real-time transcription started.")
     run_asyncio_task()
+
 if stop_button and st.session_state.websocket_connected:
     logging.debug("Stop button clicked. Stopping WebSocket transcription.")
     st.session_state.websocket_connected = False
     st.write("Real-time transcription stopped.")
+    
 real_time_transcription_output.text(st.session_state['real_time_transcription'])
 logging.debug("End of script.")
