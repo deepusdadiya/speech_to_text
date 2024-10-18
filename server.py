@@ -128,11 +128,9 @@ async def websocket_endpoint(websocket: WebSocket):
                 detected_language = result["language"]
                 transcription_text = result["text"]
                 print(f"Detected language: {detected_language}, Transcription: {transcription_text}")
-
                 if detected_language == 'hi':  # If language is Hindi
                     # Use Polyglot for better Romanization
                     transcription_text = polyglot_romanize_hindi(transcription_text)
-                
                 if detected_language in ['en', 'hi']:
                     logging.debug(f"Sending transcription message")
                     await websocket.send_text(transcription_text)
@@ -156,30 +154,24 @@ async def transcribe_audio(file: UploadFile = File(...)):
     # # Check if the uploaded file is an audio file
     if not file.content_type.startswith("audio/"):
         return JSONResponse(content={"error": "File type not supported. Please upload an audio file."}, status_code=400)
-
     # Create a temporary file to save the uploaded audio
     with tempfile.NamedTemporaryFile(delete=False) as temp_file:
         try:
             # Save the uploaded audio to the temporary file
             temp_file.write(await file.read())
             temp_file_path = temp_file.name
-
             # Use Whisper to transcribe the audio
             audio = whisper.load_audio(temp_file_path)
             audio = whisper.pad_or_trim(audio)
-
             # Make a prediction
             result = model.transcribe(audio)
             detected_language = result["language"]
             transcription_text = result["text"]
-
             # If the detected language is Hindi, use Polyglot for Romanization
             if detected_language == 'hi':
                 transcription_text = polyglot_romanize_hindi(transcription_text)
-
             # Return the transcribed (and possibly romanized) text
             return JSONResponse(content={"transcription": transcription_text})
-
         except Exception as e:
             return JSONResponse(content={"error": str(e)}, status_code=500)
         finally:
