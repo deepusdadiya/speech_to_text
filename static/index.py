@@ -18,10 +18,7 @@ if st.button("Upload and Transcribe"):
     if audio_file is not None:
         with st.spinner('Transcribing...'):
             logging.debug("Audio file uploaded. Sending POST request for transcription.")
-            response = requests.post(
-                "http://127.0.0.1:8500/transcribe/",
-                files={"file": audio_file.getvalue()}
-            )
+            response = requests.post("http://127.0.0.1:8500/transcribe/",files={"file": audio_file.getvalue()})
             logging.debug(f"Response received: {response.status_code}")
         if response.status_code == 200:
             st.write("Transcription:")
