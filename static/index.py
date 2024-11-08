@@ -49,7 +49,6 @@ if 'real_time_transcription' not in st.session_state:
 if 'websocket_connected' not in st.session_state:
     st.session_state.websocket_connected = False
 
-
 async def send_audio_data(websocket):
     try:
         logging.debug("Sending audio data.")
@@ -62,7 +61,6 @@ async def send_audio_data(websocket):
                 await asyncio.sleep(0.1)  
     except Exception as e:
         logging.error(f"Error while sending audio data: {e}")
-
 
 async def real_time_transcription():
     logging.debug("Attempting to connect to WebSocket.")
@@ -88,7 +86,6 @@ async def real_time_transcription():
                 st.session_state['real_time_transcription'] = f"Error: {e}"
             await asyncio.sleep(1)
 
-
 def run_asyncio_task():
     logging.debug("Running asyncio task for real-time transcription.")
     loop = asyncio.new_event_loop()
@@ -96,19 +93,17 @@ def run_asyncio_task():
     loop.run_until_complete(real_time_transcription())
     logging.debug("Asyncio task completed.")
 
-
 if start_button and not st.session_state.websocket_connected:
     logging.debug("Start button clicked. Starting WebSocket transcription.")
     st.session_state.websocket_connected = True
     st.write("Real-time transcription started.")
     run_asyncio_task()
 
-
 if stop_button and st.session_state.websocket_connected:
     logging.debug("Stop button clicked. Stopping WebSocket transcription.")
     st.session_state.websocket_connected = False
     st.write("Real-time transcription stopped.")
-    
+
 
 real_time_transcription_output.text(st.session_state['real_time_transcription'])
 
