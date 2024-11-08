@@ -14,6 +14,7 @@ import tempfile
 from pydub import AudioSegment
 import uvicorn
 
+
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
@@ -107,7 +108,6 @@ def polyglot_romanize_hindi(text):
     polyglot_text = Text(text, hint_language_code='hi')  # Specify Hindi as the input language
     romanized_text = polyglot_text.transliterate()  # Perform transliteration using Polyglot
     return romanized_text
-
 
 @app.websocket("/ws/transcribe/")
 async def websocket_endpoint(websocket: WebSocket):
