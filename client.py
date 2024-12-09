@@ -1,6 +1,7 @@
 import websockets
 import logging
 
+
 async def listen_to_websocket(uri):
     try:
         async with websockets.connect(uri) as websocket:
