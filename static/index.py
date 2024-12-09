@@ -13,6 +13,7 @@ st.title("Audio Transcription Service")
 st.header("Batch Transcription")
 audio_file = st.file_uploader("Upload an audio file", type=["wav", "mp3", "m4a"])
 
+
 if st.button("Upload and Transcribe"):
     logging.debug("Upload and Transcribe button clicked.")
     if audio_file is not None:
@@ -49,6 +50,7 @@ if 'real_time_transcription' not in st.session_state:
 if 'websocket_connected' not in st.session_state:
     st.session_state.websocket_connected = False
 
+
 async def send_audio_data(websocket):
     try:
         logging.debug("Sending audio data.")
@@ -61,6 +63,7 @@ async def send_audio_data(websocket):
                 await asyncio.sleep(0.1)  
     except Exception as e:
         logging.error(f"Error while sending audio data: {e}")
+
 
 async def real_time_transcription():
     logging.debug("Attempting to connect to WebSocket.")
@@ -85,6 +88,7 @@ async def real_time_transcription():
                 logging.error(f"Error during WebSocket message handling: {e}")
                 st.session_state['real_time_transcription'] = f"Error: {e}"
             await asyncio.sleep(1)
+            
 
 def run_asyncio_task():
     logging.debug("Running asyncio task for real-time transcription.")
