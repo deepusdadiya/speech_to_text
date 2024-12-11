@@ -88,7 +88,7 @@ async def real_time_transcription():
                 logging.error(f"Error during WebSocket message handling: {e}")
                 st.session_state['real_time_transcription'] = f"Error: {e}"
             await asyncio.sleep(1)
-            
+
 
 def run_asyncio_task():
     logging.debug("Running asyncio task for real-time transcription.")
@@ -110,5 +110,6 @@ if stop_button and st.session_state.websocket_connected:
 
 
 real_time_transcription_output.text(st.session_state['real_time_transcription'])
+
 
 logging.debug("End of script.")
